@@ -1,5 +1,6 @@
 import sys
 from functools import partial
+from pathlib import Path
 
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QApplication, QFileDialog, QMainWindow, QAction, \
     QVBoxLayout, QPushButton, QGridLayout, QLineEdit, QTextEdit, QScrollArea
@@ -88,32 +89,34 @@ class MainWindow(QMainWindow):
         hbox.addWidget(self.img_scroll_area)
 
         grid.addLayout(hbox, 0, 0, 1, 2)
-
-        open_action = QAction(QIcon('open.png'), '&Open', self)
+        
+        icons_folder = Path("icons")
+        
+        open_action = QAction(QIcon(str(icons_folder / "open.png")), '&Open', self)
         open_action.setShortcut('Ctrl+W')
         open_action.setStatusTip('Open image')
         open_action.triggered.connect(self.get_img)
 
-        save_action = QAction(QIcon("save.png"), '&Save', self)
+        save_action = QAction(QIcon(str(icons_folder / "save.png")), '&Save', self)
         save_action.setShortcut('Ctrl+S')
         save_action.setStatusTip('Save image')
         save_action.triggered.connect(self.save_img)
 
-        zoom_in_action = QAction(QIcon("zoom_in.png"), '&Zoom+', self)
+        zoom_in_action = QAction(QIcon(str(icons_folder / "zoom_in.png")), '&Zoom+', self)
         zoom_in_action.setShortcut('Ctrl++')
         zoom_in_action.setStatusTip('Zoom in image')
         zoom_in_action.triggered.connect(self.zoom_in_img)
 
-        zoom_out_action = QAction(QIcon("zoom_out.png"), '&Zoom-', self)
+        zoom_out_action = QAction(QIcon(str(icons_folder / "zoom_out.png")), '&Zoom-', self)
         zoom_out_action.setShortcut('Ctrl+-')
         zoom_out_action.setStatusTip('Zoom out image')
         zoom_out_action.triggered.connect(self.zoom_out_img)
 
-        show_action_seq = QAction(QIcon("actions_seq.jpg"), '&Show', self)
+        show_action_seq = QAction(QIcon(str(icons_folder / "actions_seq.jpg")), '&Show', self)
         show_action_seq.setStatusTip('Show the action sequence')
         show_action_seq.triggered.connect(self.show_action_sequence)
 
-        crop_image_action = QAction(QIcon("crop_image.png"), "&Crop", self)
+        crop_image_action = QAction(QIcon(str(icons_folder / "crop_image.png")), "&Crop", self)
         crop_image_action.setStatusTip("Crop the image")
         crop_image_action.triggered.connect(self.crop_image)
 
