@@ -1,12 +1,42 @@
 import sys
 from functools import partial
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QApplication, QFileDialog, QMainWindow, QAction, qApp, \
-    QVBoxLayout, QPushButton, QGridLayout, QLineEdit, QTextEdit
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QApplication, QFileDialog, QMainWindow, QAction, \
+    QVBoxLayout, QPushButton, QGridLayout, QLineEdit, QTextEdit, QScrollArea
 from PyQt5.QtGui import QPixmap, QImage, QIcon
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QEvent, QObject, QPoint
 import cv2
+import numpy as np
 
 import func2action
+
+
+class MouseTracker(QObject):
+    positionChanged = pyqtSignal(QPoint)
+    buttonPressed = pyqtSignal(QPoint)
+    buttonReleased = pyqtSignal(QPoint)
+
+    def __init__(self, widget):
+        super().__init__(widget)
+        self._widget = widget
+        self.widget.setMouseTracking(True)
+        self.widget.installEventFilter(self)
+
+    @property
+    def widget(self):
+        return self._widget
+
+    def eventFilter(self, obj, event):
+        if obj is self.widget and event.type() == QEvent.MouseMove:
+            self.positionChanged.emit(event.pos())
+
+        if obj is self.widget and event.type() == QEvent.MouseButtonPress:
+            self.buttonPressed.emit(event.pos())
+
+        if obj is self.widget and event.type() == QEvent.MouseButtonRelease:
+            self.buttonReleased.emit(event.pos())
+
+        return super().eventFilter(obj, event)
 
 
 class MainWindow(QMainWindow):
@@ -21,7 +51,23 @@ class MainWindow(QMainWindow):
         self.parent = super().__init__()
         self.image = None
         self.action_seq = list()
+
+        self.img_scroll_area = QScrollArea(self)
+        self.img_scroll_area.setWidgetResizable(True)
         self.img_label = QLabel(self)
+        self.img_label.setScaledContents(True)
+        self.img_scroll_area.setWidget(self.img_label)
+
+        self.mouse_tracker = MouseTracker(self.img_label)
+        self.mouse_tracker.buttonPressed.connect(self.mouse_press)
+        self.mouse_tracker.buttonReleased.connect(self.mouse_released)
+        self.mouse_tracker.positionChanged.connect(self.mouse_move)
+
+        self.crop_area = None
+        self.tmp_img = None
+        self.arg_window = None
+        self.arg_seq_window = None
+
         self.centralWidget = QWidget(self.parent)
         self.initUI()
 
@@ -39,11 +85,9 @@ class MainWindow(QMainWindow):
 
         hbox = QHBoxLayout(self.centralWidget)
         hbox.addLayout(vbox)
-        hbox.addWidget(self.img_label)
+        hbox.addWidget(self.img_scroll_area)
 
         grid.addLayout(hbox, 0, 0, 1, 2)
-
-        # self.setLayout(grid)
 
         open_action = QAction(QIcon('open.png'), '&Open', self)
         open_action.setShortcut('Ctrl+W')
@@ -69,6 +113,10 @@ class MainWindow(QMainWindow):
         show_action_seq.setStatusTip('Show the action sequence')
         show_action_seq.triggered.connect(self.show_action_sequence)
 
+        crop_image_action = QAction(QIcon("crop_image.png"), "&Crop", self)
+        crop_image_action.setStatusTip("Crop the image")
+        crop_image_action.triggered.connect(self.crop_image)
+
         self.statusBar()
 
         menubar = self.menuBar()
@@ -81,11 +129,13 @@ class MainWindow(QMainWindow):
 
         zoom_out_tool = self.addToolBar('Zoom out')
         zoom_out_tool.addAction(zoom_out_action)
+        crop_image_tool = self.addToolBar("Croop")
+        crop_image_tool.addAction(crop_image_action)
 
         show_action_tool = self.addToolBar('Show action sequence')
         show_action_tool.addAction(show_action_seq)
 
-        self.resize(550, 550)
+        self.showMaximized()
         self.setWindowTitle('Img')
         self.show()
 
@@ -124,6 +174,50 @@ class MainWindow(QMainWindow):
     def show_action_sequence(self):
         self.arg_seq_window = ActionSeqWindow(self.action_seq)
         self.arg_seq_window.show()
+
+    @pyqtSlot(QPoint)
+    def mouse_press(self, pos):
+        if self.tmp_img is not None:
+            self.crop_area = np.array([[pos.x(), pos.y()]])
+
+    @pyqtSlot(QPoint)
+    def mouse_move(self, pos):
+
+        if self.crop_area is not None:
+            img_size = np.array(self.image.shape[:2])[::-1]
+            lable_size = np.array([self.img_label.size().width(), self.img_label.size().height()])
+            if np.size(self.crop_area, axis=0) == 1:
+                self.crop_area = np.append(self.crop_area, [[pos.y(), pos.x()]], axis=0)
+            else:
+                self.crop_area[1] = np.array([pos.x(), pos.y()])
+            tmp_image_copy = self.tmp_img.copy()
+            points = (self.crop_area / lable_size * img_size).astype(int)
+            cv2.rectangle(tmp_image_copy, points[0], points[1], (255, 255, 255), 3)
+            self.set_photo(tmp_image_copy)
+
+    @pyqtSlot(QPoint)
+    def mouse_released(self, pos):
+        if self.crop_area is not None:
+            self.crop_area[1] = [pos.x(), pos.y()]
+            self.crop_image()
+
+    def crop_image(self):
+        if self.crop_area is None:
+            mat = np.ones(self.image.shape, dtype='uint8') * 70
+            self.tmp_img = cv2.subtract(self.image, mat)
+            self.set_photo(self.tmp_img)
+        elif len(self.crop_area) == 2:
+            img_size = np.array(self.image.shape[:2])[::-1]
+            lable_size = np.array([self.img_label.size().width(), self.img_label.size().height()])
+
+            np.sort(self.crop_area, axis=1)
+
+            self.crop_area = (self.crop_area / lable_size * img_size).astype(int)
+            self.image = self.image[self.crop_area[0, 1]:self.crop_area[1, 1],
+                        self.crop_area[0, 0]:self.crop_area[1, 0]].copy()
+            self.tmp_img = None
+            self.crop_area = None
+            self.set_photo(self.image)
 
 
 class FilterArgWindow(QMainWindow):

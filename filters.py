@@ -7,7 +7,7 @@ def blur(img, kernel_size=3):
     return cv2.blur(img, (kernel_size, kernel_size))
 
 
-# ПЕРИСАТЬ!!!
+
 def gamma_correction(img, gamma=2.5):
     c = 255
     matrix = np.array([np.uint8(np.clip(c * ((i / 255.0) ** gamma), 0, 255)) for i in np.arange(0, 256)]).astype("uint8")
