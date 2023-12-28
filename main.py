@@ -1,4 +1,5 @@
 import sys
+import os
 from functools import partial
 from pathlib import Path
 
@@ -6,8 +7,9 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QApplication, QFileDia
     QVBoxLayout, QPushButton, QGridLayout, QLineEdit, QTextEdit, QScrollArea
 from PyQt5.QtGui import QPixmap, QImage, QIcon
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QEvent, QObject, QPoint
-import cv2
 import numpy as np
+import cv2
+
 
 import func2action
 
@@ -92,7 +94,7 @@ class MainWindow(QMainWindow):
         
         icons_folder = Path("icons")
         
-        open_action = QAction(QIcon(str(icons_folder / "open.png")), '&Open', self)
+        open_action = QAction(QIcon(str(icons_folder /"open.png")), '&Open', self)
         open_action.setShortcut('Ctrl+W')
         open_action.setStatusTip('Open image')
         open_action.triggered.connect(self.get_img)
@@ -112,7 +114,7 @@ class MainWindow(QMainWindow):
         zoom_out_action.setStatusTip('Zoom out image')
         zoom_out_action.triggered.connect(self.zoom_out_img)
 
-        show_action_seq = QAction(QIcon(str(icons_folder / "actions_seq.jpg")), '&Show', self)
+        show_action_seq = QAction(QIcon(str(icons_folder / "actions_seq.png")), '&Show', self)
         show_action_seq.setStatusTip('Show the action sequence')
         show_action_seq.triggered.connect(self.show_action_sequence)
 
@@ -289,6 +291,10 @@ class ActionSeqWindow(QMainWindow):
 
 
 if __name__ == '__main__':
+    try:
+        os.chdir(sys._MEIPASS)
+    except Exception:
+        base_path = os.path.abspath(".")
     app = QApplication(sys.argv)
     ex = MainWindow()
     sys.exit(app.exec_())
