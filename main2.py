@@ -10,8 +10,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QEvent, QObject, QPoint
 import numpy as np
 import cv2
 
-
-import func2action
+import func2action_2
 
 
 class MouseTracker(QObject):
@@ -70,6 +69,7 @@ class MainWindow(QMainWindow):
         self.tmp_img = None
         self.arg_window = None
         self.arg_seq_window = None
+        self.module = None
 
         self.centralWidget = QWidget(self.parent)
         self.initUI()
@@ -79,7 +79,8 @@ class MainWindow(QMainWindow):
         grid = QGridLayout(self.centralWidget)
 
         vbox = QVBoxLayout(self.centralWidget)
-        funcs_list = func2action.all_func()
+        filters_filename = QFileDialog.getOpenFileName()[0]
+        funcs_list = func2action_2.all_func()
 
         for method in funcs_list:
             button = QPushButton(method.name)
@@ -91,10 +92,10 @@ class MainWindow(QMainWindow):
         hbox.addWidget(self.img_scroll_area)
 
         grid.addLayout(hbox, 0, 0, 1, 2)
-        
+
         icons_folder = Path("icons")
-        
-        open_action = QAction(QIcon(str(icons_folder /"open.png")), '&Open', self)
+
+        open_action = QAction(QIcon(str(icons_folder / "open.png")), '&Open', self)
         open_action.setShortcut('Ctrl+W')
         open_action.setStatusTip('Open image')
         open_action.triggered.connect(self.get_img)
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow):
         frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = QImage(frame, frame.shape[1], frame.shape[0], frame.strides[0], QImage.Format_RGB888)
         self.img_label.setPixmap(QPixmap.fromImage(img))
-        #print(self.img_label.size())
+        # print(self.img_label.size())
 
     def zoom_in_img(self):
         self.image = self.resize_img(self.image, 1.1)
@@ -198,7 +199,7 @@ class MainWindow(QMainWindow):
                 self.crop_area[1] = np.array([pos.x(), pos.y()])
             tmp_image_copy = self.tmp_img.copy()
             points = (self.crop_area / lable_size * img_size).astype(int)
-            #points = self.crop_area
+            # points = self.crop_area
             cv2.rectangle(tmp_image_copy, points[0], points[1], (255, 255, 255), 3)
             self.set_photo(tmp_image_copy)
 
@@ -221,7 +222,7 @@ class MainWindow(QMainWindow):
 
             self.crop_area = (self.crop_area / lable_size * img_size).astype(int)
             self.image = self.image[self.crop_area[0, 1]:self.crop_area[1, 1],
-                        self.crop_area[0, 0]:self.crop_area[1, 0]].copy()
+                         self.crop_area[0, 0]:self.crop_area[1, 0]].copy()
             self.tmp_img = None
             self.crop_area = None
             self.set_photo(self.image)
