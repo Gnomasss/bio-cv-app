@@ -129,3 +129,28 @@ class ImgInfoWindow(QMainWindow):
         self.resize(500, 200)
         self.setWindowTitle("Image information")
 
+
+class ImgsSeqInfoWindow(QMainWindow):
+
+    def __init__(self, imgs_list, img_index):
+        super().__init__()
+
+        self.imgs_list = imgs_list
+        self.index = img_index
+
+        self.textEdit = QTextEdit()
+        self.initUI()
+
+    def initUI(self):
+        font = QFont()
+        font.setPointSize(FONT_SIZE)
+        self.setFont(font)
+
+        self.setCentralWidget(self.textEdit)
+        self.textEdit.setPlainText("")
+
+        self.textEdit.append(f"Seq len: {len(self.imgs_list)}\n")
+        self.textEdit.append(f"Current index: {self.index}\n")
+
+        self.resize(500, 200)
+        self.setWindowTitle("Image information")

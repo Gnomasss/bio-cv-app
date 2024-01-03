@@ -60,6 +60,8 @@ class MainWindow(QMainWindow):
         self.github_url = "https://github.com/Gnomasss/bio-cv-app"
 
         self.image = None
+        self.images_list = None
+        self.img_index = None
         self.action_seq = list()
 
         self.img_scroll_area = QScrollArea(self)
@@ -81,6 +83,7 @@ class MainWindow(QMainWindow):
         self.filters_box = None
         self.info_window = None
         self.img_info_window = None
+        self.imgs_seq_info_window = None
 
         self.centralWidget = QWidget(self.parent)
         self.initUI()
@@ -115,6 +118,11 @@ class MainWindow(QMainWindow):
         save_action.setStatusTip('Save image')
         save_action.triggered.connect(self.save_img)
 
+        add_img_action = QAction(QIcon(str(icons_folder / "add_image.png")), '&Add', self)
+        add_img_action.setShortcut('Ctrl+O')
+        add_img_action.setStatusTip('Add image')
+        add_img_action.triggered.connect(self.add_image_2list)
+
         zoom_in_action = QAction(QIcon(str(icons_folder / "zoom_in.png")), '&Zoom+', self)
         zoom_in_action.setShortcut('Ctrl++')
         zoom_in_action.setStatusTip('Zoom in image')
@@ -145,12 +153,25 @@ class MainWindow(QMainWindow):
         open_img_info_message_action.setStatusTip("Open info about img")
         open_img_info_message_action.triggered.connect(self.open_img_info)
 
+        next_img_action = QAction(QIcon(str(icons_folder / "next_img.png")), "&Next", self)
+        next_img_action.setStatusTip("Next image in seq")
+        next_img_action.triggered.connect(self.next_img)
+
+        prev_img_action = QAction(QIcon(str(icons_folder / "prev_img.png")), "&Previous", self)
+        prev_img_action.setStatusTip("Previous image in seq")
+        prev_img_action.triggered.connect(self.prev_img)
+
+        open_info_seq_imgs_action = QAction(QIcon(str(icons_folder / "img_list.png")), "&Seq", self)
+        open_info_seq_imgs_action.setStatusTip("Open info about images seq")
+        open_info_seq_imgs_action.triggered.connect(self.open_info_img_seq)
+
         self.statusBar()
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(open_action)
         fileMenu.addAction(save_action)
+        fileMenu.addAction(add_img_action)
 
         zoom_in_tool = self.addToolBar('Zoom in')
         zoom_in_tool.addAction(zoom_in_action)
@@ -173,6 +194,15 @@ class MainWindow(QMainWindow):
         show_img_info_tool = self.addToolBar("Show infromtion about image")
         show_img_info_tool.addAction(open_img_info_message_action)
 
+        next_img_tool = self.addToolBar("Next image in sequence")
+        next_img_tool.addAction(next_img_action)
+
+        prev_img_tool = self.addToolBar("Previous image in sequence")
+        prev_img_tool.addAction(prev_img_action)
+
+        open_seq_info_tool = self.addToolBar("Show info about img seq")
+        open_seq_info_tool.addAction(open_info_seq_imgs_action)
+
         self.showMaximized()
         self.setWindowTitle('Img')
         self.show()
@@ -180,9 +210,12 @@ class MainWindow(QMainWindow):
     def get_img(self):
         filename = QFileDialog.getOpenFileName()[0]
         self.image = cv2.imread(filename)
+        self.images_list = [self.image]
+        self.img_index = 0
         self.set_photo(self.image)
 
     def set_photo(self, img):
+        self.images_list[self.img_index] = img
         frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = QImage(frame, frame.shape[1], frame.shape[0], frame.strides[0], QImage.Format_RGB888)
         self.img_label.setPixmap(QPixmap.fromImage(img))
@@ -201,13 +234,21 @@ class MainWindow(QMainWindow):
         cv2.imwrite(filename, self.image)
         self.statusBar().showMessage("Image save")
 
+    def add_image_2list(self):
+        filename = QFileDialog.getOpenFileName()[0]
+        self.image = cv2.imread(filename)
+        self.images_list.append(self.image)
+        self.img_index = len(self.images_list) - 1
+        self.set_photo(self.image)
+
     def get_filter_args(self, method):
         self.arg_window = FilterArgWindow(method, self)
         self.arg_window.show()
 
     def apply_filter(self, method, action_args):
         self.action_seq.append((method.name, action_args))
-        self.image = method.func(self.image, **action_args)
+        self.images_list = [method.func(img, **action_args) for img in self.images_list]
+        self.image = self.images_list[self.img_index]
         self.set_photo(self.image)
 
     def show_action_sequence(self):
@@ -290,6 +331,22 @@ class MainWindow(QMainWindow):
     def open_img_info(self):
         self.img_info_window = ImgInfoWindow(self.image)
         self.img_info_window.show()
+
+    def next_img(self):
+        self.img_index += 1
+        self.image = self.images_list[self.img_index % len(self.images_list)]
+        self.img_index %= len(self.images_list)
+        self.set_photo(self.image)
+
+    def prev_img(self):
+        self.img_index -= 1
+        self.image = self.images_list[self.img_index % len(self.images_list)]
+        self.img_index %= len(self.images_list)
+        self.set_photo(self.image)
+
+    def open_info_img_seq(self):
+        self.imgs_seq_info_window = ImgsSeqInfoWindow(self.images_list, self.img_index)
+        self.imgs_seq_info_window.show()
 
 
 if __name__ == '__main__':
