@@ -5,14 +5,16 @@ from pathlib import Path
 
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QApplication, QFileDialog, QMainWindow, QAction, \
     QVBoxLayout, QPushButton, QGridLayout, QLineEdit, QTextEdit, QScrollArea
-from PyQt5.QtGui import QPixmap, QImage, QIcon
+from PyQt5.QtGui import QPixmap, QImage, QIcon, QFont
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QEvent, QObject, QPoint
 import numpy as np
 import cv2
 
 
 import func2action
+from derivative_windows import *
 
+FONT_SIZE = 16
 
 class MouseTracker(QObject):
     positionChanged = pyqtSignal(QPoint)
@@ -51,7 +53,12 @@ class MainWindow(QMainWindow):
         return cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
 
     def __init__(self):
+
         self.parent = super().__init__()
+
+        self.versin = 0.1
+        self.github_url = "https://github.com/Gnomasss/bio-cv-app"
+
         self.image = None
         self.action_seq = list()
 
@@ -70,24 +77,28 @@ class MainWindow(QMainWindow):
         self.tmp_img = None
         self.arg_window = None
         self.arg_seq_window = None
+        self.funcs_list = None
+        self.filters_box = None
+        self.info_window = None
+        self.img_info_window = None
 
         self.centralWidget = QWidget(self.parent)
         self.initUI()
 
     def initUI(self):
+        font = QFont()
+        font.setPointSize(FONT_SIZE)
+        self.setFont(font)
+
         self.setCentralWidget(self.centralWidget)
         grid = QGridLayout(self.centralWidget)
 
-        vbox = QVBoxLayout(self.centralWidget)
-        funcs_list = func2action.all_func()
+        self.filters_box = QVBoxLayout(self.centralWidget)
 
-        for method in funcs_list:
-            button = QPushButton(method.name)
-            button.clicked.connect(partial(self.get_filter_args, method=method))
-            vbox.addWidget(button)
+        self.add_filters()
 
         hbox = QHBoxLayout(self.centralWidget)
-        hbox.addLayout(vbox)
+        hbox.addLayout(self.filters_box)
         hbox.addWidget(self.img_scroll_area)
 
         grid.addLayout(hbox, 0, 0, 1, 2)
@@ -118,9 +129,21 @@ class MainWindow(QMainWindow):
         show_action_seq.setStatusTip('Show the action sequence')
         show_action_seq.triggered.connect(self.show_action_sequence)
 
+        add_filters_action = QAction(QIcon(str(icons_folder / "new_filters.png")), '&Add', self)
+        add_filters_action.setStatusTip('Add filters from file')
+        add_filters_action.triggered.connect(self.get_new_filters)
+
         crop_image_action = QAction(QIcon(str(icons_folder / "crop_image.png")), "&Crop", self)
         crop_image_action.setStatusTip("Crop the image")
         crop_image_action.triggered.connect(self.crop_image)
+
+        open_info_message_action = QAction(QIcon(str(icons_folder / "info_message.png")), "&Info", self)
+        open_info_message_action.setStatusTip("Open info about app")
+        open_info_message_action.triggered.connect(self.open_info_message)
+
+        open_img_info_message_action = QAction(QIcon(str(icons_folder / "img_info.png")), "&Info", self)
+        open_img_info_message_action.setStatusTip("Open info about img")
+        open_img_info_message_action.triggered.connect(self.open_img_info)
 
         self.statusBar()
 
@@ -134,11 +157,21 @@ class MainWindow(QMainWindow):
 
         zoom_out_tool = self.addToolBar('Zoom out')
         zoom_out_tool.addAction(zoom_out_action)
+
         crop_image_tool = self.addToolBar("Croop")
         crop_image_tool.addAction(crop_image_action)
 
         show_action_tool = self.addToolBar('Show action sequence')
         show_action_tool.addAction(show_action_seq)
+
+        add_filters_tool = self.addToolBar('Add new filters')
+        add_filters_tool.addAction(add_filters_action)
+
+        show_info_tool = self.addToolBar("Show infromtion about app")
+        show_info_tool.addAction(open_info_message_action)
+
+        show_img_info_tool = self.addToolBar("Show infromtion about image")
+        show_img_info_tool.addAction(open_img_info_message_action)
 
         self.showMaximized()
         self.setWindowTitle('Img')
@@ -226,70 +259,37 @@ class MainWindow(QMainWindow):
             self.crop_area = None
             self.set_photo(self.image)
 
+    def get_new_filters(self):
+        filters_file_path = QFileDialog.getOpenFileName()[0]
+        new_funcs_list = func2action.all_func_from_file(filters_file_path)
+        self.add_filters(new_funcs_list)
 
-class FilterArgWindow(QMainWindow):
-    def __init__(self, method, parent=None):
-        super(FilterArgWindow, self).__init__(parent)
-        self.parent = parent
-        self.method = method
-        self.centralWidget = QWidget(self)
-        self.edits = None
-        self.initGui()
+    def add_filters(self, new_funcs_list=None):
+        if new_funcs_list is None:
+            self.funcs_list = func2action.all_func()
+        else:
+            for i in reversed(range(self.filters_box.count())):
+                self.filters_box.itemAt(i).widget().setParent(None)
 
-    def initGui(self):
-        self.setCentralWidget(self.centralWidget)
-        grid = QGridLayout(self.centralWidget)
-        grid.setSpacing(10)
-        self.edits = dict()
-        for i, arg in enumerate(self.method.args):
-            label = QLabel(arg)
-            edit = QLineEdit()
-            self.edits[arg] = edit
-            grid.addWidget(label, i, 0)
-            grid.addWidget(edit, i, 1)
+            new_funcs_names = set([func.name for func in new_funcs_list])
 
-        apply_button = QPushButton("Apply")
-        apply_button.clicked.connect(self.apply)
-        grid.addWidget(apply_button, len(self.method.args), 0)
+            self.funcs_list = [method for method in self.funcs_list if method.name not in new_funcs_names]
 
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.cancel)
-        grid.addWidget(cancel_button, len(self.method.args), 1)
+            self.funcs_list += new_funcs_list
 
-        self.resize(100, 100)
-        self.setWindowTitle(f'Argument function {self.method.name}')
+        for method in self.funcs_list:
+            button = QPushButton(method.name)
+            button.clicked.connect(partial(self.get_filter_args, method=method))
+            button.setStatusTip(method.description)
+            self.filters_box.addWidget(button)
 
-    def cancel(self):
-        self.parent.action_args = None
-        self.close()
+    def open_info_message(self):
+        self.info_window = InfoMessageWindow(self.versin, self.github_url)
+        self.info_window.show()
 
-    def apply(self):
-        action_args = dict()
-        for arg in self.edits:
-            action_args[arg] = float(self.edits[arg].text())
-        self.close()
-        self.parent.apply_filter(self.method, action_args)
-
-
-class ActionSeqWindow(QMainWindow):
-    def __init__(self, action_seq):
-        super().__init__()
-        self.seq = action_seq
-        self.textEdit = QTextEdit()
-        self.initUI()
-
-    def initUI(self):
-        self.setCentralWidget(self.textEdit)
-        self.textEdit.setPlainText("")
-
-        for name, args in self.seq:
-            self.textEdit.append(f"{name}\n")
-            for arg in args:
-                self.textEdit.append(f"{arg}: {args[arg]} ")
-            self.textEdit.append('\n')
-
-        self.resize(500, 500)
-        self.setWindowTitle("Seq of arguments")
+    def open_img_info(self):
+        self.img_info_window = ImgInfoWindow(self.image)
+        self.img_info_window.show()
 
 
 if __name__ == '__main__':
@@ -297,6 +297,7 @@ if __name__ == '__main__':
         os.chdir(sys._MEIPASS)
     except Exception:
         base_path = os.path.abspath(".")
+
     app = QApplication(sys.argv)
     ex = MainWindow()
     sys.exit(app.exec_())
