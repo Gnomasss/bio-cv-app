@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from scipy import ndimage
 
 
 def blur(descr_flag=False, img=None, kernel_size=3):
@@ -21,6 +22,48 @@ def gamma_correction(descr_flag=False, img=None, gamma=2.5):
     matrix = np.array([np.uint8(np.clip(c * ((i / 255.0) ** gamma), 0, 255)) for i in np.arange(0, 256)]).astype("uint8")
 
     return cv2.LUT(img, matrix)
+
+
+def gray(descr_flag=False, img=None):
+    description = "Перевод изображения в градации серого"
+    if descr_flag:
+        return description
+    if len(img.shape) >= 3:
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        return img
+
+
+def resize(descr_flag=False, img=None, width=None, height=None):
+    description = "Изменеие размеров изображения"
+    if descr_flag:
+        return description
+    if height is None:
+        height = img.shape[0]
+    if width is None:
+        width = img.shape[1]
+    width, height = int(width), int(height)
+    return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
+
+
+def exact_crop(descr_flag=False, img=None, x=0, y=0, width=None, height=None):
+    description = "Точное вырезание участка изображения"
+    if descr_flag:
+        return description
+    if height is None:
+        height = img.shape[0]
+    if width is None:
+        width = img.shape[1]
+    x, y, width, height = int(x), int(y), int(width), int(height)
+    return img[y:y + height, x:x + width]
+
+
+def rotate_img(descr_flag=False, img=None, angle=90):
+    description = "Повернуть изображение на определенный угол в градусах"
+    if descr_flag:
+        return description
+
+    return ndimage.rotate(img, angle)
 
 
 def sob(descr_flag=False, img=None):
@@ -60,7 +103,7 @@ def laplasiian(descr_flag=False, img=None):
     #new_img1 = standart(np.int64(img) - 3 * cv2.Laplacian(new_img, cv2.CV_64F))
     #new_img2 = standart(np.int64(new_img) - 1 * cv2.Laplacian(new_img, cv2.CV_64F))
     #new_img3 = standart(np.int64(img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
-    new_img4 = standart(np.int64(new_img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
+    new_img4 = standart(False, np.int64(new_img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
     return new_img4
 
 

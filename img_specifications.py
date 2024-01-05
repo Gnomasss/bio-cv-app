@@ -7,6 +7,9 @@ def shape(img):
 
 
 def mean_brightness(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    if len(img.shape) >= 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = img
     return np.mean(gray)
 

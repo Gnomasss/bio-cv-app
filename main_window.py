@@ -76,85 +76,104 @@ class MainWindow(QMainWindow):
         # Make actions
         ################################
 
-        open_action = QAction(QIcon(str(icons_folder / "open.png")), '&Open', self)
+        open_action = QAction(QIcon(str(icons_folder / "open.png")), '&Open image', self)
         open_action.setShortcut('Ctrl+W')
         open_action.setStatusTip('Open image')
         open_action.triggered.connect(self.get_img)
 
-        save_action = QAction(QIcon(str(icons_folder / "save.png")), '&Save', self)
+        save_action = QAction(QIcon(str(icons_folder / "save.png")), '&Save image', self)
         save_action.setShortcut('Ctrl+S')
         save_action.setStatusTip('Save image')
         save_action.triggered.connect(self.save_img)
 
-        add_img_action = QAction(QIcon(str(icons_folder / "add_image.png")), '&Add', self)
+        add_img_action = QAction(QIcon(str(icons_folder / "add_image.png")), '&Add image to list', self)
         add_img_action.setShortcut('Ctrl+O')
-        add_img_action.setStatusTip('Add image')
+        add_img_action.setStatusTip('Add image to list')
         add_img_action.triggered.connect(self.add_new_image_2list)
 
-        zoom_in_action = QAction(QIcon(str(icons_folder / "zoom_in.png")), '&Zoom+', self)
+        zoom_in_action = QAction(QIcon(str(icons_folder / "zoom_in.png")), '&Zoom in', self)
         zoom_in_action.setShortcut('Ctrl++')
         zoom_in_action.setStatusTip('Zoom in image')
         zoom_in_action.triggered.connect(self.zoom_in_img)
 
-        zoom_out_action = QAction(QIcon(str(icons_folder / "zoom_out.png")), '&Zoom-', self)
+        zoom_out_action = QAction(QIcon(str(icons_folder / "zoom_out.png")), '&Zoom out', self)
         zoom_out_action.setShortcut('Ctrl+-')
         zoom_out_action.setStatusTip('Zoom out image')
         zoom_out_action.triggered.connect(self.zoom_out_img)
 
-        show_action_seq = QAction(QIcon(str(icons_folder / "actions_seq.png")), '&Show', self)
-        show_action_seq.setStatusTip('Show the action sequence')
+        show_action_seq = QAction(QIcon(str(icons_folder / "actions_seq.png")), '&Show filters sequence', self)
+        show_action_seq.setStatusTip('Show the filters sequence')
         show_action_seq.triggered.connect(self.show_action_sequence)
 
-        add_filters_action = QAction(QIcon(str(icons_folder / "new_filters.png")), '&Add', self)
+        add_filters_action = QAction(QIcon(str(icons_folder / "new_filters.png")), '&Add new filters from file', self)
         add_filters_action.setStatusTip('Add filters from file')
         add_filters_action.triggered.connect(self.get_new_filters)
 
-        crop_image_action = QAction(QIcon(str(icons_folder / "crop_image.png")), "&Crop", self)
+        crop_image_action = QAction(QIcon(str(icons_folder / "crop_image.png")), "&Crop image", self)
         crop_image_action.setStatusTip("Crop the image")
         crop_image_action.triggered.connect(self.crop_image)
 
-        open_info_message_action = QAction(QIcon(str(icons_folder / "info_message.png")), "&Info", self)
+        open_info_message_action = QAction(QIcon(str(icons_folder / "info_message.png")), "&Info about app", self)
         open_info_message_action.setStatusTip("Open info about app")
         open_info_message_action.triggered.connect(self.open_info_message)
 
-        open_img_info_message_action = QAction(QIcon(str(icons_folder / "img_info.png")), "&Info", self)
-        open_img_info_message_action.setStatusTip("Open info about img")
+        open_img_info_message_action = QAction(QIcon(str(icons_folder / "img_info.png")), "&Info about image", self)
+        open_img_info_message_action.setStatusTip("Open info about image")
         open_img_info_message_action.triggered.connect(self.open_img_info)
 
-        next_img_action = QAction(QIcon(str(icons_folder / "next_img.png")), "&Next", self)
-        next_img_action.setStatusTip("Next image in seq")
+        next_img_action = QAction(QIcon(str(icons_folder / "next_img.png")), "&Next image in list", self)
+        next_img_action.setStatusTip("Next image in list")
         next_img_action.triggered.connect(self.next_img)
 
-        prev_img_action = QAction(QIcon(str(icons_folder / "prev_img.png")), "&Previous", self)
-        prev_img_action.setStatusTip("Previous image in seq")
+        prev_img_action = QAction(QIcon(str(icons_folder / "prev_img.png")), "&Previous image in list", self)
+        prev_img_action.setStatusTip("Previous image in list")
         prev_img_action.triggered.connect(self.prev_img)
 
-        open_info_seq_imgs_action = QAction(QIcon(str(icons_folder / "img_list.png")), "&Seq", self)
-        open_info_seq_imgs_action.setStatusTip("Open info about images seq")
+        open_info_seq_imgs_action = QAction(QIcon(str(icons_folder / "img_list.png")), "&Info about images list", self)
+        open_info_seq_imgs_action.setStatusTip("Open info about images list")
         open_info_seq_imgs_action.triggered.connect(self.open_info_img_seq)
+
+        rotate_img_action = QAction(QIcon(str(icons_folder / "rotate.png")), "&Flip image", self)
+        rotate_img_action.setStatusTip("Rotate image by 90 degrees")
+        rotate_img_action.triggered.connect(self.flip_img)
 
         ###########################
 
         self.statusBar()
 
         menubar = self.menuBar()
+
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(open_action)
         fileMenu.addAction(save_action)
-        fileMenu.addAction(add_img_action)
+
+        filtersMenu = menubar.addMenu('&Filters')
+        filtersMenu.addAction(add_filters_action)
+        filtersMenu.addAction(show_action_seq)
+
+        img_seqMenu = menubar.addMenu('&Images')
+        img_seqMenu.addAction(open_img_info_message_action)
+        img_seqMenu.addAction(add_img_action)
+        img_seqMenu.addAction(next_img_action)
+        img_seqMenu.addAction(prev_img_action)
+        img_seqMenu.addAction(open_info_seq_imgs_action)
+
+        infoMenu = menubar.addMenu('&Info')
+        infoMenu.addAction(open_info_message_action)
 
         ##################
 
         self.add_2_tool_bar(zoom_in_action, "Zoom in")
         self.add_2_tool_bar(zoom_out_action, "Zoom out")
-        self.add_2_tool_bar(crop_image_action, "Croop")
-        self.add_2_tool_bar(show_action_seq, "Show action sequence")
-        self.add_2_tool_bar(add_filters_action, "Add new filters")
-        self.add_2_tool_bar(open_info_message_action, "Show infromation about ap")
-        self.add_2_tool_bar(open_img_info_message_action, "Show infromation about image")
-        self.add_2_tool_bar(next_img_action, "Next image in sequence")
-        self.add_2_tool_bar(prev_img_action, "Previous image in sequence")
-        self.add_2_tool_bar(open_info_seq_imgs_action, "Show info about img seq")
+        self.add_2_tool_bar(crop_image_action, "Crop")
+        self.add_2_tool_bar(rotate_img_action, "Rotate image")
+        #self.add_2_tool_bar(show_action_seq, "Show action sequence")
+        #self.add_2_tool_bar(add_filters_action, "Add new filters")
+        #self.add_2_tool_bar(open_info_message_action, "Show infromation about ap")
+        #self.add_2_tool_bar(open_img_info_message_action, "Show infromation about image")
+        #self.add_2_tool_bar(next_img_action, "Next image in sequence")
+        #self.add_2_tool_bar(prev_img_action, "Previous image in sequence")
+        #self.add_2_tool_bar(open_info_seq_imgs_action, "Show info about img seq")
 
         #########################
 
@@ -183,6 +202,11 @@ class MainWindow(QMainWindow):
 
     def zoom_out_img(self):
         self.img = self.resize_img(self.img, 0.9)
+        self.update_img_list()
+        self.img_window.set_img(self.img)
+
+    def flip_img(self):
+        self.img = cv2.rotate(self.img, cv2.ROTATE_90_CLOCKWISE)
         self.update_img_list()
         self.img_window.set_img(self.img)
 

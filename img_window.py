@@ -104,7 +104,7 @@ class ImageWindow(QScrollArea):
     def mouse_release(self, pos):
         mouse_pos = self.convert_mouse_pos([pos.x(), pos.y()])
         self.points[-1] = mouse_pos
-        self.parent.crop_image()
+        self.parent.crop_image() #подумать над этим
 
 
 if __name__ == '__main__':
