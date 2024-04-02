@@ -33,8 +33,10 @@ class MainWindow(QMainWindow):
         self.versin = 0.1
         self.github_url = "https://github.com/Gnomasss/bio-cv-app"
 
+        self.prev_img_filter = None
         self.img = None
-        self.imgs_list = None
+        self.prev_imgs_list = None
+        self.imgs_list = []
         self.img_index = None
 
         self.img_window = ImageWindow(self)
@@ -137,6 +139,10 @@ class MainWindow(QMainWindow):
         rotate_img_action.setStatusTip("Rotate image by 90 degrees")
         rotate_img_action.triggered.connect(self.flip_img)
 
+        cancel_filter = QAction(QIcon(str(icons_folder / "cancel.png")), "&Cancel filter", self)
+        cancel_filter.setStatusTip("Go back to the previous image state")
+        cancel_filter.triggered.connect(self.cancel_filter)
+
         ###########################
 
         self.statusBar()
@@ -150,6 +156,7 @@ class MainWindow(QMainWindow):
         filtersMenu = menubar.addMenu('&Filters')
         filtersMenu.addAction(add_filters_action)
         filtersMenu.addAction(show_action_seq)
+        filtersMenu.addAction(cancel_filter)
 
         img_seqMenu = menubar.addMenu('&Images')
         img_seqMenu.addAction(open_img_info_message_action)
@@ -177,6 +184,8 @@ class MainWindow(QMainWindow):
 
         #########################
 
+        #self.get_img() # отладка!!!
+
         # self.showMaximized()
         self.setWindowTitle('Img')
         self.show()
@@ -190,10 +199,13 @@ class MainWindow(QMainWindow):
 
     def get_img(self):
         filename = QFileDialog.getOpenFileName()[0]
-        self.img = cv2.imread(filename)
-        self.imgs_list = [self.img]
-        self.img_index = 0
-        self.img_window.set_img(self.img)
+        #filename = "/home/pashnya/Pictures/Wallpapers/initial-d.jpeg" #для отладки!!!
+        #if filename is not None and filename != "":
+        if filename != "":
+            self.img = cv2.imread(filename)
+            self.imgs_list.append(self.img)
+            self.img_index = len(self.imgs_list) - 1
+            self.img_window.set_img(self.img)
 
     def zoom_in_img(self):
         self.img = self.resize_img(self.img, 1.1)
@@ -212,8 +224,9 @@ class MainWindow(QMainWindow):
 
     def save_img(self):
         filename = QFileDialog.getSaveFileName()[0]
-        cv2.imwrite(filename, self.img)
-        self.statusBar().showMessage("Image save")
+        if filename != "":
+            cv2.imwrite(filename, self.img)
+            self.statusBar().showMessage("Image save")
 
     def add_new_image_2list(self):
         filename = QFileDialog.getOpenFileName()[0]
@@ -223,23 +236,23 @@ class MainWindow(QMainWindow):
         self.img_window.set_img(self.img)
 
     def crop_image(self):
-        if self.img_window.points is None:
-            mat = np.ones(self.img.shape, dtype='uint8') * 70
-            self.tmp_img = cv2.subtract(self.img, mat)
-            self.img_window.set_img(self.tmp_img)
-            self.img_window.draw_mode_on()
+        if self.img_window.rect is not None and len(self.img_window.rect) == 2:
+            crop_area = np.array(self.img_window.rect)
+            if np.linalg.det(crop_area) == 0:
+                crop_area = np.array([[0, 0], self.img.shape[:2]])
 
-        elif len(self.img_window.points) == 2:
-            crop_area = np.array(self.img_window.points)
-            np.sort(crop_area, axis=1)
+            '''self.img = self.img[crop_area[0, 1]:crop_area[1, 1],
+                       crop_area[0, 0]:crop_area[1, 0]].copy()            
+            self.update_img_list()'''
+            self.imgs_list.append(self.img[crop_area[0, 1]:crop_area[1, 1],
+                       crop_area[0, 0]:crop_area[1, 0]].copy())
+            self.img_index += 1
+            self.img = self.imgs_list[self.img_index]
 
-            self.img = self.img[crop_area[0, 1]:crop_area[1, 1],
-                       crop_area[0, 0]:crop_area[1, 0]].copy()
-            self.update_img_list()
-
-            self.tmp_img = None
-            self.img_window.draw_mode_off()
+            #self.tmp_img = None
+            #self.img_window.draw_mode_off()
             self.img_window.set_img(self.img)
+            self.img_window.rect = None
 
     def get_new_filters(self):
         filters_file_path = QFileDialog.getOpenFileName()[0]
@@ -295,6 +308,7 @@ class MainWindow(QMainWindow):
 
     def apply_filter(self, method, action_args):
         self.action_seq.append((method.name, action_args))
+        self.prev_imgs_list = [image.copy() for image in self.imgs_list]
         self.imgs_list = [method.func(img, **action_args) for img in self.imgs_list]
         self.img = self.imgs_list[self.img_index]
         self.img_window.set_img(self.img)
@@ -303,6 +317,13 @@ class MainWindow(QMainWindow):
         self.arg_seq_window = ActionSeqWindow(self.action_seq)
         self.arg_seq_window.show()
 
+    def cancel_filter(self):
+        if self.prev_imgs_list is not None:
+            self.imgs_list = [image.copy() for image in self.prev_imgs_list]
+            self.img = self.imgs_list[self.img_index]
+            self.img_window.set_img(self.img)
+            self.prev_imgs_list = None
+            del self.action_seq[-1]
 
 
 if __name__ == '__main__':
