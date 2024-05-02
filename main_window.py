@@ -13,6 +13,7 @@ import cv2
 import func2action
 from derivative_windows import *
 from img_window import ImageWindow
+from filter_constructor_window import ConstructorWindow
 
 FONT_SIZE = 16
 
@@ -35,6 +36,7 @@ class MainWindow(QMainWindow):
 
         self.prev_img_filter = None
         self.img = None
+        self.scale = 1
         self.prev_imgs_list = None
         self.imgs_list = []
         self.img_index = None
@@ -46,6 +48,7 @@ class MainWindow(QMainWindow):
         self.crop_area = None
         self.tmp_img = None
         self.arg_window = None
+        self.constructor_window = None
         self.arg_seq_window = None
         self.funcs_list = None
         self.filters_box = None
@@ -98,9 +101,9 @@ class MainWindow(QMainWindow):
         zoom_in_action.setStatusTip('Zoom in image')
         zoom_in_action.triggered.connect(self.zoom_in_img)
 
-        zoom_out_action = QAction(QIcon(str(icons_folder / "zoom_out.png")), '&Zoom out', self)
+        zoom_out_action = QAction(QIcon(str(icons_folder / "zoom_out.png")), '&Zoom out_points', self)
         zoom_out_action.setShortcut('Ctrl+-')
-        zoom_out_action.setStatusTip('Zoom out image')
+        zoom_out_action.setStatusTip('Zoom out_points image')
         zoom_out_action.triggered.connect(self.zoom_out_img)
 
         show_action_seq = QAction(QIcon(str(icons_folder / "actions_seq.png")), '&Show filters sequence', self)
@@ -143,6 +146,10 @@ class MainWindow(QMainWindow):
         cancel_filter.setStatusTip("Go back to the previous image state")
         cancel_filter.triggered.connect(self.cancel_filter)
 
+        open_constructor_action = QAction(QIcon(str(icons_folder / "constructor.png")), "&Construct filter alg", self)
+        open_constructor_action.setStatusTip("filter constructor")
+        open_constructor_action.triggered.connect(self.open_filter_constructor_window)
+
         ###########################
 
         self.statusBar()
@@ -154,6 +161,7 @@ class MainWindow(QMainWindow):
         fileMenu.addAction(save_action)
 
         filtersMenu = menubar.addMenu('&Filters')
+        filtersMenu.addAction(open_constructor_action)
         filtersMenu.addAction(add_filters_action)
         filtersMenu.addAction(show_action_seq)
         filtersMenu.addAction(cancel_filter)
@@ -171,7 +179,7 @@ class MainWindow(QMainWindow):
         ##################
 
         self.add_2_tool_bar(zoom_in_action, "Zoom in")
-        self.add_2_tool_bar(zoom_out_action, "Zoom out")
+        self.add_2_tool_bar(zoom_out_action, "Zoom out_points")
         self.add_2_tool_bar(crop_image_action, "Crop")
         self.add_2_tool_bar(rotate_img_action, "Rotate image")
         #self.add_2_tool_bar(show_action_seq, "Show action sequence")
@@ -189,6 +197,9 @@ class MainWindow(QMainWindow):
         # self.showMaximized()
         self.setWindowTitle('Img')
         self.show()
+
+    def set_img_2_img_window(self):
+        self.img_window.set_img(self.resize_img(self.img, self.scale))
 
     def add_2_tool_bar(self, action, descr):
         tool = self.addToolBar(descr)
@@ -208,19 +219,17 @@ class MainWindow(QMainWindow):
             self.img_window.set_img(self.img)
 
     def zoom_in_img(self):
-        self.img = self.resize_img(self.img, 1.1)
-        self.update_img_list()
-        self.img_window.set_img(self.img)
+        self.scale += 0.1
+        self.set_img_2_img_window()
 
     def zoom_out_img(self):
-        self.img = self.resize_img(self.img, 0.9)
-        self.update_img_list()
-        self.img_window.set_img(self.img)
+        self.scale -= 0.1 if self.scale > 0.15 else 0
+        self.set_img_2_img_window()
 
     def flip_img(self):
         self.img = cv2.rotate(self.img, cv2.ROTATE_90_CLOCKWISE)
         self.update_img_list()
-        self.img_window.set_img(self.img)
+        self.set_img_2_img_window()
 
     def save_img(self):
         filename = QFileDialog.getSaveFileName()[0]
@@ -233,7 +242,8 @@ class MainWindow(QMainWindow):
         self.img = cv2.imread(filename)
         self.imgs_list.append(self.img)
         self.img_index = len(self.imgs_list) - 1
-        self.img_window.set_img(self.img)
+        self.scale = 1
+        self.set_img_2_img_window()
 
     def crop_image(self):
         if self.img_window.rect is not None and len(self.img_window.rect) == 2:
@@ -244,14 +254,16 @@ class MainWindow(QMainWindow):
             '''self.img = self.img[crop_area[0, 1]:crop_area[1, 1],
                        crop_area[0, 0]:crop_area[1, 0]].copy()            
             self.update_img_list()'''
+            crop_area = np.int64(crop_area / self.scale)
             self.imgs_list.append(self.img[crop_area[0, 1]:crop_area[1, 1],
                        crop_area[0, 0]:crop_area[1, 0]].copy())
             self.img_index += 1
+            #self.scale = 1
             self.img = self.imgs_list[self.img_index]
 
             #self.tmp_img = None
             #self.img_window.draw_mode_off()
-            self.img_window.set_img(self.img)
+            self.set_img_2_img_window()
             self.img_window.rect = None
 
     def get_new_filters(self):
@@ -288,15 +300,17 @@ class MainWindow(QMainWindow):
 
     def next_img(self):
         self.img_index += 1
+        self.scale = 1
         self.img = self.imgs_list[self.img_index % len(self.imgs_list)]
         self.img_index %= len(self.imgs_list)
-        self.img_window.set_img(self.img)
+        self.set_img_2_img_window()
 
     def prev_img(self):
         self.img_index -= 1
+        self.scale = 1
         self.img = self.imgs_list[self.img_index % len(self.imgs_list)]
         self.img_index %= len(self.imgs_list)
-        self.img_window.set_img(self.img)
+        self.set_img_2_img_window()
 
     def open_info_img_seq(self):
         self.imgs_seq_info_window = ImgsSeqInfoWindow(self.imgs_list, self.img_index)
@@ -306,22 +320,26 @@ class MainWindow(QMainWindow):
         self.arg_window = FilterArgWindow(method, self)
         self.arg_window.show()
 
+    def open_filter_constructor_window(self):
+        self.constructor_window = ConstructorWindow(self.action_seq)
+        self.constructor_window.show()
+
     def apply_filter(self, method, action_args):
-        self.action_seq.append((method.name, action_args))
+        self.action_seq.append((method, action_args))
         self.prev_imgs_list = [image.copy() for image in self.imgs_list]
         self.imgs_list = [method.func(img, **action_args) for img in self.imgs_list]
         self.img = self.imgs_list[self.img_index]
-        self.img_window.set_img(self.img)
+        self.set_img_2_img_window()
 
     def show_action_sequence(self):
-        self.arg_seq_window = ActionSeqWindow(self.action_seq)
+        self.arg_seq_window = ActionSeqWindow(((method.name, action_args) for (method, action_args) in self.action_seq))
         self.arg_seq_window.show()
 
     def cancel_filter(self):
         if self.prev_imgs_list is not None:
             self.imgs_list = [image.copy() for image in self.prev_imgs_list]
             self.img = self.imgs_list[self.img_index]
-            self.img_window.set_img(self.img)
+            self.set_img_2_img_window()
             self.prev_imgs_list = None
             del self.action_seq[-1]
 

@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QLabel, QMainWindow, \
-    QPushButton, QGridLayout, QLineEdit, QTextEdit
-from PyQt5.QtGui import QFont
-
+from PyQt5.QtWidgets import (QWidget, QLabel, QMainWindow, QSizePolicy,
+                             QPushButton, QGridLayout, QLineEdit, QTextEdit, QScrollArea)
+from PyQt5.QtGui import QFont, QImage, QPixmap, QPalette
+import cv2
 import func2action
 
 FONT_SIZE = 16
@@ -154,3 +154,58 @@ class ImgsSeqInfoWindow(QMainWindow):
 
         self.resize(500, 200)
         self.setWindowTitle("Image information")
+
+
+'''class ErrorMessageWindow(QMainWindow):
+
+    def __init__(self, message):
+        super().__init__()
+        self.message = message
+
+        self.textEdit = QTextEdit()
+        self.initUI()
+
+    def initUI(self):
+        font = QFont()
+        font.setPointSize(FONT_SIZE)
+        self.setFont(font)
+
+        self.setCentralWidget(self.textEdit)
+        self.textEdit.setPlainText("")
+
+        self.textEdit.append(self.message)
+
+        self.resize(500, 200)
+        self.setWindowTitle("Error")'''
+
+
+class TestImageWindow(QMainWindow):
+
+    def __init__(self, img):
+        super().__init__()
+        self.img = img
+        self.img_pixmap = None
+
+        self.img_label = QLabel()
+        self.scrollArea = QScrollArea()
+
+        self.scrollArea.setWidget(self.img_label)
+        self.scrollArea.setWidgetResizable(True)
+
+        self.setCentralWidget(self.scrollArea)
+
+        self.initUI()
+
+    def initUI(self):
+        font = QFont()
+        font.setPointSize(FONT_SIZE)
+        self.setFont(font)
+
+        self.set_img()
+        self.setWindowTitle("Test Image")
+
+    def set_img(self):
+        frame = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+        img = QImage(frame, frame.shape[1], frame.shape[0], frame.strides[0], QImage.Format_RGB888)
+        self.img_pixmap = QPixmap.fromImage(img)
+        self.img_label.setPixmap(self.img_pixmap)

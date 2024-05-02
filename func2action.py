@@ -16,21 +16,34 @@ def func_descr(func):
 
 
 class Func:
-    def __init__(self, name, func):
+    def __init__(self, name, func, descr):
         self.name = name
-        self.func = func_without_descr(func)
-        self.description = func_descr(func)
-        self.args = getfullargspec(func).args[2:]
+        self.func = func
+        self.description = descr
+        self.args = getfullargspec(func).args[1:]
 
     def print_args(self):
         print(self.args)
 
 
 def all_func():
+    descriptions = dict()
+    with open('filters_description.txt') as f:
+        for line in f:
+            name, descr = line.split(': ')
+            descriptions[name] = descr
+
     res = list()
     for name, func in getmembers(filters, isfunction):
-        res.append(Func(name.replace('_', ' '), func))
+        res.append(Func(name.replace('_', ' '), func, descriptions[name] if name in descriptions else None))
 
+    return res
+
+def all_spec_func(python_file):
+
+    res = list()
+    for name, func in getmembers(python_file, isfunction):
+        res.append(Func(name.replace('_', ' '), func, None))
     return res
 
 
@@ -41,7 +54,7 @@ def all_func_from_file(file_path):
     sys.modules["module.name"] = new_filters
     spec.loader.exec_module(new_filters)
     for name, func in getmembers(new_filters, isfunction):
-        res.append(Func(name.replace('_', ' '), func))
+        res.append(Func(name.replace('_', ' '), func, None))
 
     return res
 

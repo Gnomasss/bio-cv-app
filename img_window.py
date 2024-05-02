@@ -55,6 +55,11 @@ class ImageWindow(QScrollArea):
 
         self.setWidgetResizable(True)
         self.img_label = QLabel(self)
+        
+        self.img_info = QLabel(self)
+        self.img_info.setStyleSheet("background-color: rgba(224, 224, 224, 90);")
+        self.img_info.setFont(QFont('Arial', 16))
+
         # self.img_label.setScaledContents(True)
         self.setWidget(self.img_label)
         self.img_pixmap = None
@@ -68,11 +73,7 @@ class ImageWindow(QScrollArea):
 
     def set_img(self, img):
         self.img = img
-        frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = QImage(frame, frame.shape[1], frame.shape[0], frame.strides[0], QImage.Format_RGB888)
-
-        self.img_pixmap = QPixmap.fromImage(img)
-        self.img_label.setPixmap(self.img_pixmap)
+        self.update_img(self.img)
 
     def update_img(self, img):
         frame = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -96,7 +97,16 @@ class ImageWindow(QScrollArea):
     @pyqtSlot(QPoint)
     def mouse_move(self, pos):
         self.mouse_pos = self.convert_mouse_pos([pos.x(), pos.y()])
-
+        if self.img is not None and all((0 <= self.mouse_pos[i] < self.img.shape[1-i]) for i in range(2)):
+            if len(self.img.shape) == 3:
+                pixel_color = dict(zip(['B', 'G', 'R'], self.img[self.mouse_pos[1], self.mouse_pos[0], :]))
+            elif len(self.img.shape) == 2:
+                pixel_color = {"B": self.img[self.mouse_pos[1], self.mouse_pos[0]]}
+            else:
+                pixel_color = ""
+            self.img_info.setText(f"{dict(zip(['X', 'Y'], self.mouse_pos))}\n"
+                                  f"{pixel_color}")
+        self.img_info.adjustSize()
         self.draw_rectangle(2)
         self.set_cursor()
         self.remake_rect(2)

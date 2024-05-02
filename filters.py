@@ -1,43 +1,31 @@
 import cv2
 import numpy as np
 from scipy import ndimage
+import suppotr_functions as sup
 
 
-def blur(descr_flag=False, img=None, kernel_size=3):
-    description = "Блюр"
-    if descr_flag:
-        return description
-
+def gaussian_blur(img=None, kernel_size=3):
     kernel_size = int(kernel_size)
 
-    return cv2.blur(img, (kernel_size, kernel_size))
+    return cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
 
 
-def gamma_correction(descr_flag=False, img=None, gamma=2.5):
-    description = "Гамма преобразование"
-    if descr_flag:
-        return description
-
+def gamma_correction(img=None, gamma=2.5):
     c = 255
     matrix = np.array([np.uint8(np.clip(c * ((i / 255.0) ** gamma), 0, 255)) for i in np.arange(0, 256)]).astype("uint8")
 
     return cv2.LUT(img, matrix)
 
 
-def gray(descr_flag=False, img=None):
-    description = "Перевод изображения в градации серого"
-    if descr_flag:
-        return description
+def gray(img=None):
+
     if len(img.shape) >= 3:
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     else:
         return img
 
 
-def resize(descr_flag=False, img=None, width=None, height=None):
-    description = "Изменеие размеров изображения"
-    if descr_flag:
-        return description
+def resize(img=None, width=None, height=None):
     if height is None:
         height = img.shape[0]
     if width is None:
@@ -46,10 +34,7 @@ def resize(descr_flag=False, img=None, width=None, height=None):
     return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
 
 
-def exact_crop(descr_flag=False, img=None, x=0, y=0, width=None, height=None):
-    description = "Точное вырезание участка изображения"
-    if descr_flag:
-        return description
+def exact_crop(img=None, x=0, y=0, width=None, height=None):
     if height is None:
         height = img.shape[0]
     if width is None:
@@ -58,19 +43,12 @@ def exact_crop(descr_flag=False, img=None, x=0, y=0, width=None, height=None):
     return img[y:y + height, x:x + width]
 
 
-def rotate_img(descr_flag=False, img=None, angle=90):
-    description = "Повернуть изображение на определенный угол в градусах"
-    if descr_flag:
-        return description
+def rotate_img(img=None, angle=90):
 
     return ndimage.rotate(img, angle)
 
 
-def sob(descr_flag=False, img=None):
-    description = None
-    if descr_flag:
-        return description
-
+def sob(img=None):
     blur = cv2.GaussianBlur(img, (3, 3), 0)
     sobel_X = lambda image: np.uint8(np.abs(cv2.Sobel(image, cv2.CV_64F, 1, 0)))
     sobel_Y = lambda image: np.uint8(np.abs(cv2.Sobel(image, cv2.CV_64F, 0, 1)))
@@ -80,31 +58,43 @@ def sob(descr_flag=False, img=None):
     return sob
 
 
-def standart(descr_flag=False, image=None):
-    description = "Вспомогательная функция"
-    if descr_flag:
-        return description
-
-    image2 = image.copy()
-    image2[image2 < 0.0] = 0.0
-    image2[image2 > 255.0] = 255.0
-    image2 = image2.astype(np.uint8)
-
-    return image2
-
-
-def laplasiian(descr_flag=False, img=None):
-    description = None
-    if descr_flag:
-        return description
-
+def laplasiian(img=None):
     new_img = cv2.GaussianBlur(img, (3, 3), 0)
 
     #new_img1 = standart(np.int64(img) - 3 * cv2.Laplacian(new_img, cv2.CV_64F))
     #new_img2 = standart(np.int64(new_img) - 1 * cv2.Laplacian(new_img, cv2.CV_64F))
     #new_img3 = standart(np.int64(img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
-    new_img4 = standart(False, np.int64(new_img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
-    return new_img4
+    new_img4 = sup.standart(np.int64(new_img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
+    return sup.standart(np.int64(cv2.Laplacian(img, cv2.CV_64F)))
+    #return cv.convertScaleAbs(cv2.Laplacian(img, cv2.CV_64F))
+
+
+def equalization_hist(img=None):
+    return cv2.equalizeHist(img)
+
+
+def linear_hist_transform(img=None, k=1, b=0):
+    matrix = np.array([np.uint8(np.clip(k * i + b, 0, 255)) for i in np.arange(0, 256)]).astype(
+        "uint8")
+    return cv2.LUT(img, matrix)
+
+
+def piecewise_linear_3_transform(img=None, x1=0.5, y1=0.5, x2=0.5, y2=0.5):
+    matrix = np.zeros((256, 1), dtype=np.uint8)
+    for i in range(256):
+        if i < x1 * 255:
+            matrix[i] = i * (y1 / x1)
+        elif i < x2 * 255:
+            matrix[i] = (i - 255 * x1) * (y2 - y1) / (x2 - x1) + y1 * 255
+        else:
+            matrix[i] = (i - 255) * (y2 - 1) * (x2 - 1) + 255
+
+        if matrix[i] < 0:
+            matrix[i] = 0
+        if matrix[i] > 255:
+            matrix[i] = 255
+
+    return cv2.LUT(img, matrix)
 
 
 if __name__ == '__main__':
