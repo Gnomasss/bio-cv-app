@@ -6,7 +6,7 @@ import cv2
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QGraphicsView, QGraphicsEllipseItem, QGraphicsRectItem,
                              QGraphicsProxyWidget, QGridLayout, QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
                              QPushButton, QWidget, QAction, QFileDialog, QToolButton, QToolBar, QMessageBox)
-from PyQt5.QtGui import QPainter, QIcon
+from PyQt5.QtGui import QPainter, QIcon, QColor, QFont
 from PyQt5.QtCore import QSize, Qt
 from PyQt5 import QtCore, QtWidgets
 
@@ -15,11 +15,15 @@ import special_filters_for_scene
 from filter_box_scene import NodeItem, GraphicsScene, Edge
 from derivative_windows import TestImageWindow, ImgInfoWindow
 
+FONT_SIZE = 16
+
 
 class ConstructorWindow(QMainWindow):
     def __init__(self, basic_action_seq):
         self.parent = super().__init__()
 
+        self.font = QFont()
+        self.font.setPointSize(FONT_SIZE)
         self.basic_action_seq = basic_action_seq
 
         self.imgs = []
@@ -43,6 +47,8 @@ class ConstructorWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
+
+        self.setFont(self.font)
         #filters = func2action.all_func()
         self.setCentralWidget(self.centralWidget)
 
@@ -52,6 +58,7 @@ class ConstructorWindow(QMainWindow):
         self.my_scene = GraphicsScene()
         self.view = QGraphicsView(self.centralWidget)
         self.view.setScene(self.my_scene)
+        self.view.setBackgroundBrush(QColor(170, 170, 170, 255))
         self.view.resize(1000, 600)
         #self.view.setMinimumSize(200, 200)
         self.view.setRenderHints(QPainter.Antialiasing)
@@ -86,6 +93,10 @@ class ConstructorWindow(QMainWindow):
         start_alg_action.setStatusTip("Start")
         start_alg_action.triggered.connect(self.start_processing)
 
+        save_script_action = QAction(QIcon(str(icons_folder / "save.png")), "&Save script", self)
+        save_script_action.setStatusTip("Save script")
+        save_script_action.triggered.connect(self.save_script)
+
         delete_node_action = QToolButton(self)
         delete_node_action.setIcon(QIcon(str(icons_folder / "delete_node.png")))
         delete_node_action.setCheckable(True)
@@ -101,6 +112,7 @@ class ConstructorWindow(QMainWindow):
         fileMenu.addAction(get_imgs_action)
         fileMenu.addAction(save_imgs_action)
         fileMenu.addAction(get_test_img_action)
+        fileMenu.addAction(save_script_action)
 
         self.add_2_tool_bar(test_action, "test_action")
         self.add_2_tool_bar(start_alg_action, "Start image processing")
@@ -176,11 +188,12 @@ class ConstructorWindow(QMainWindow):
     def newNode(self, filter, n_in, n_out):
         x = 0
         y = 0
-        w = 200
-        h = 50 * (len(filter.args) + 1)
+        w = max(215, len(filter.name) * 11)
+        h = 40 * (len(filter.args) + 2) + 5
         if len(filter.args) == 0:
-            w = 100
-            h = 100
+            w = max(115, len(filter.name) * 12)
+            #w = 90
+            h = 85
 
         node = NodeItem(x, y, w, h, n_in, n_out, filter)
         if n_out == 1 and n_in == 0:
@@ -188,6 +201,7 @@ class ConstructorWindow(QMainWindow):
         if n_out == 0 and n_in == 1:
             self.output_nodes.add(node)
         self.my_scene.addItem(node)
+        node.filterBox.filterWidget.setFont(self.font)
         node.view_button.clicked.connect(partial(self.test_processing, node=node))
         return node
 
@@ -309,7 +323,7 @@ class ConstructorWindow(QMainWindow):
             #self.test_img_windows.clear()
             graph = self.create_graph()
             res = self.apply_img(self.test_img, graph, node)
-            print(len(res))
+
             for img in res:
                 self.test_img_windows.append(TestImageWindow(img))
                 #img_window.setParent(self)
@@ -319,6 +333,74 @@ class ConstructorWindow(QMainWindow):
             error_message.setText("Error")
             error_message.setInformativeText("Please select a test image")
             error_message.exec_()
+
+    def open_script(self):
+        #open_script_path = QFileDialog.getSaveFileName()[0]
+        open_script_path = "/home/pashnya/Documents/test/test.txt"
+        if open_script_path:
+            #self.input_nodes.clear()
+            #self.output_nodes.clear()
+            graph = dict()
+            filter_names = dict()
+            filters = list()
+            for filter in self.funcs_list:
+                filter_names[filter.name] = filter
+            with open(open_script_path) as f:
+                n = int(f.readline())
+                for _ in range(n):
+                    inp = f.readline().split('#')
+                    name = inp[0]
+                    args = dict([(x.split(':')[0], float(x.split(':')[1])) for x in inp[1:-1] if ':' in x])
+                    filters.append([filter_names[name], args])
+                for i in range(n):
+                    childs = f.readline().split()
+                    childs[-1] = childs[-1][:-2]
+                    graph[filters[i]] = [filters[int(child)] for child in childs]
+
+            self.input_nodes.clear()
+            self.output_nodes.clear()
+            for filter in filters:
+                if filter[0].name == "input":
+                    self.input_nodes.append(self.newNode(filter[0], 0, 1))
+                elif filter[0].name == "output":
+                    self.input_nodes.append(self.newNode(filter[0], 1, 0))
+                # не могу сейчас дописать отрисовку считанного графа
+                # не буду пока ее никуда добавлять
+
+    def save_script(self):
+        graph = None
+        try:
+            graph = self.create_graph()
+        except Exception:
+            error_message = QMessageBox()
+            error_message.setText("Error")
+            error_message.setInformativeText("Please create correct script")
+            error_message.exec_()
+        if graph:
+            save_script_path = QFileDialog.getSaveFileName()[0]
+            #save_script_path = "/home/pashnya/Documents/test/test.txt"
+            with open(save_script_path, 'w') as f:
+                f.write(f"{len(graph) + len(self.output_nodes)}\n")
+                node_index = dict()
+                ind = 0
+                for node in graph:
+                    node_index[node] = ind
+                    ind += 1
+                    f.write(f"{node.filter.name}#")
+                    for arg in node.filterBox.filterWidget.edits:
+                        value = node.filterBox.filterWidget.edits[arg].text()
+                        f.write(f"{arg}:{value}#")
+                    f.write("\n")
+                for output in self.output_nodes:
+                    node_index[output] = ind
+                    ind += 1
+                    f.write(f"{output.filter.name}#\n")
+
+                for node in node_index:
+                    if node in graph:
+                        for child in graph[node]:
+                            f.write(f"{node_index[child]} ")
+                    f.write("\n")
 
 
 if __name__ == '__main__':

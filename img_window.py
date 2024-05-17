@@ -55,7 +55,8 @@ class ImageWindow(QScrollArea):
 
         self.setWidgetResizable(True)
         self.img_label = QLabel(self)
-        
+        self.img_label.setStyleSheet("background-color: rgba(110, 110, 110, 255);")
+
         self.img_info = QLabel(self)
         self.img_info.setStyleSheet("background-color: rgba(224, 224, 224, 90);")
         self.img_info.setFont(QFont('Arial', 16))

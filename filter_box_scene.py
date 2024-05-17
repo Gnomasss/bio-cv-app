@@ -183,6 +183,7 @@ class NodeItem(QGraphicsItem):
     def paint(self, painter, option, widget=...):
         # иначе warning-ами сыпет, но работает
         self.filterBox.paint(painter, option, widget)
+        #painter.drawRect(self.boundingRect())
         '''for point in self.inp_points:
             point.paint(painter, option, widget)
         for point in self.out_points:

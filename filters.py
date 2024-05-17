@@ -97,6 +97,57 @@ def piecewise_linear_3_transform(img=None, x1=0.5, y1=0.5, x2=0.5, y2=0.5):
     return cv2.LUT(img, matrix)
 
 
+def DFT(img=None):
+
+    dft = cv2.dft(np.float32(img), flags=cv2.DFT_COMPLEX_OUTPUT)
+    dft_shift = np.fft.fftshift(dft)
+    magnitude_spectrum = np.log(cv2.magnitude(dft_shift[:, :, 0], dft_shift[:, :, 1]))
+
+    cv2.normalize(magnitude_spectrum, magnitude_spectrum, 0, 255, cv2.NORM_MINMAX)
+    magnitude_spectrum = magnitude_spectrum.astype(np.uint8)
+    return magnitude_spectrum
+
+
+def homomorf_filtering(img=None, d_0=80, gamma_l=0.25, gamma_h=2):
+    ln_img = np.log(img)
+
+    _, dft_shift = sup.DFT(ln_img)
+
+    mask = sup.homomorf_mask(img, d_0, gamma_l, gamma_h)
+    fshift = dft_shift * mask
+
+    idft_img = sup.iDFT(fshift)
+
+    new_img = np.exp(idft_img)
+    cv2.normalize(new_img, new_img, 0, 255, cv2.NORM_MINMAX)
+    new_img = new_img.astype(np.uint8)
+    return new_img
+
+
+def gauss_high_freq_filter(img=None, d_0=80):
+    _, dft_shift = sup.DFT(img)
+    mask = sup.gauss_high_freq_mask(img, d_0)
+    fshift = dft_shift * mask
+
+    idft_img = sup.iDFT(fshift)
+
+    cv2.normalize(idft_img, idft_img, 0, 255, cv2.NORM_MINMAX)
+    idft_img = idft_img.astype(np.uint8)
+    return idft_img
+
+
+def ideal_high_freq_filter(img=None, d_0=80):
+    _, dft_shift = sup.DFT(img)
+    mask = sup.ideal_high_freq_mask(img, d_0)
+    fshift = dft_shift * mask
+
+    idft_img = sup.iDFT(fshift)
+
+    cv2.normalize(idft_img, idft_img, 0, 255, cv2.NORM_MINMAX)
+    idft_img = idft_img.astype(np.uint8)
+    return idft_img
+
+
 if __name__ == '__main__':
     pass
 
