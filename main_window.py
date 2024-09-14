@@ -6,8 +6,9 @@ from pathlib import Path
 from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QApplication, QFileDialog, QMainWindow, QAction, \
     QVBoxLayout, QPushButton, QGridLayout, QLineEdit, QTextEdit, QScrollArea
 from PyQt5.QtGui import QPixmap, QImage, QIcon, QFont
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QEvent, QObject, QPoint, QTimer
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QEvent, QObject, QPoint, QTimer, Qt
 import numpy as np
+from suppotr_functions import standart
 import cv2
 
 import func2action
@@ -55,6 +56,8 @@ class MainWindow(QMainWindow):
         self.info_window = None
         self.img_info_window = None
         self.imgs_seq_info_window = None
+        self.scroll_filters = None
+        self.filter_box_widget = None
 
         self.centralWidget = QWidget(self.parent)
         self.initUI()
@@ -68,11 +71,21 @@ class MainWindow(QMainWindow):
 
         hbox = QHBoxLayout(self.centralWidget)
 
-        self.filters_box = QVBoxLayout(self.centralWidget)
+        self.scroll_filters = QScrollArea(self.centralWidget)
+        self.filters_box = QVBoxLayout()
+        self.filter_box_widget = QWidget()
 
         self.add_filters()
 
-        hbox.addLayout(self.filters_box)
+        self.filter_box_widget.setLayout(self.filters_box)
+
+        self.scroll_filters.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scroll_filters.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #self.scroll_filters.setWidgetResizable(True)
+        self.scroll_filters.setMaximumWidth(330)
+        self.scroll_filters.setWidget(self.filter_box_widget)
+
+        hbox.addWidget(self.scroll_filters)
 
         hbox.addWidget(self.img_window)
 
@@ -327,7 +340,7 @@ class MainWindow(QMainWindow):
     def apply_filter(self, method, action_args):
         self.action_seq.append((method, action_args))
         self.prev_imgs_list = [image.copy() for image in self.imgs_list]
-        self.imgs_list = [method.func(img, **action_args) for img in self.imgs_list]
+        self.imgs_list = [standart(method.func(img, **action_args)) for img in self.imgs_list]
         self.img = self.imgs_list[self.img_index]
         self.set_img_2_img_window()
 

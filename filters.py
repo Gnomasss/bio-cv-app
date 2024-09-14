@@ -4,10 +4,22 @@ from scipy import ndimage
 import suppotr_functions as sup
 
 
-def gaussian_blur(img=None, kernel_size=3):
+def gaussian_blur(img=None, kernel_size=3, sigma=0):
     kernel_size = int(kernel_size)
 
-    return cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
+    return cv2.GaussianBlur(img, (kernel_size, kernel_size), sigmaX=sigma, sigmaY=sigma)
+
+
+def average_blur(img=None, kernel_size=3):
+    kernel_size = int(kernel_size)
+
+    return cv2.blur(img, (kernel_size, kernel_size))
+
+
+def bilateral_filter(img=None, kernel_size=5, sigma_color=75, sigma_space=75):
+    kernel_size = int(kernel_size)
+
+    return cv2.bilateralFilter(img, kernel_size, sigma_color, sigma_space)
 
 
 def gamma_correction(img=None, gamma=2.5):
@@ -15,6 +27,13 @@ def gamma_correction(img=None, gamma=2.5):
     matrix = np.array([np.uint8(np.clip(c * ((i / 255.0) ** gamma), 0, 255)) for i in np.arange(0, 256)]).astype("uint8")
 
     return cv2.LUT(img, matrix)
+
+
+def gradation_correction(img=None, k=255):
+    mn = img - np.min(img)
+    eps = 0.01
+    img_stand = k * (mn / (np.max(mn) if np.max(mn) > 0 else eps))
+    return sup.standart(img_stand)
 
 
 def gray(img=None):
@@ -43,6 +62,11 @@ def exact_crop(img=None, x=0, y=0, width=None, height=None):
     return img[y:y + height, x:x + width]
 
 
+def thresholding(img=None, threshold=125):
+    _, thresh1 = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
+    return thresh1
+
+
 def rotate_img(img=None, angle=90):
 
     return ndimage.rotate(img, angle)
@@ -65,7 +89,7 @@ def laplasiian(img=None):
     #new_img2 = standart(np.int64(new_img) - 1 * cv2.Laplacian(new_img, cv2.CV_64F))
     #new_img3 = standart(np.int64(img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
     new_img4 = sup.standart(np.int64(new_img) - 1 * cv2.Laplacian(img, cv2.CV_64F))
-    return sup.standart(np.int64(cv2.Laplacian(img, cv2.CV_64F)))
+    return np.int64(cv2.Laplacian(img, cv2.CV_64F))
     #return cv.convertScaleAbs(cv2.Laplacian(img, cv2.CV_64F))
 
 
@@ -98,18 +122,13 @@ def piecewise_linear_3_transform(img=None, x1=0.5, y1=0.5, x2=0.5, y2=0.5):
 
 
 def DFT(img=None):
-
-    dft = cv2.dft(np.float32(img), flags=cv2.DFT_COMPLEX_OUTPUT)
-    dft_shift = np.fft.fftshift(dft)
-    magnitude_spectrum = np.log(cv2.magnitude(dft_shift[:, :, 0], dft_shift[:, :, 1]))
-
-    cv2.normalize(magnitude_spectrum, magnitude_spectrum, 0, 255, cv2.NORM_MINMAX)
-    magnitude_spectrum = magnitude_spectrum.astype(np.uint8)
-    return magnitude_spectrum
+    mag, _ = sup.DFT(img)
+    return mag
 
 
 def homomorf_filtering(img=None, d_0=80, gamma_l=0.25, gamma_h=2):
-    ln_img = np.log(img)
+    eps = 10**(-6)
+    ln_img = np.log(img + eps)
 
     _, dft_shift = sup.DFT(ln_img)
 
@@ -118,7 +137,11 @@ def homomorf_filtering(img=None, d_0=80, gamma_l=0.25, gamma_h=2):
 
     idft_img = sup.iDFT(fshift)
 
-    new_img = np.exp(idft_img)
+    #idft_img = idft_img.copy()
+
+    cv2.normalize(idft_img, idft_img, 0, 1, cv2.NORM_MINMAX)
+
+    new_img = np.exp(idft_img).copy()
     cv2.normalize(new_img, new_img, 0, 255, cv2.NORM_MINMAX)
     new_img = new_img.astype(np.uint8)
     return new_img
@@ -139,6 +162,7 @@ def gauss_high_freq_filter(img=None, d_0=80):
 def ideal_high_freq_filter(img=None, d_0=80):
     _, dft_shift = sup.DFT(img)
     mask = sup.ideal_high_freq_mask(img, d_0)
+
     fshift = dft_shift * mask
 
     idft_img = sup.iDFT(fshift)

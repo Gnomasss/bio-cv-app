@@ -13,33 +13,46 @@ def standart(image=None):
 
 def DFT(img):
 
-    dft = cv2.dft(np.float32(img), flags=cv2.DFT_COMPLEX_OUTPUT)
-    dft_shift = np.fft.fftshift(dft)
-    magnitude_spectrum = np.log(cv2.magnitude(dft_shift[:, :, 0], dft_shift[:, :, 1]))
+    #dft = cv2.dft(np.float32(img), flags=cv2.DFT_COMPLEX_OUTPUT)
+    #dft_shift = np.fft.fftshift(dft)
+    #magnitude_spectrum = np.log(cv2.magnitude(dft_shift[:, :, 0], dft_shift[:, :, 1]))
 
-    cv2.normalize(magnitude_spectrum, magnitude_spectrum, 0, 1, cv2.NORM_MINMAX)
-    return magnitude_spectrum, dft_shift
+    #cv2.normalize(magnitude_spectrum, magnitude_spectrum, 0, 1, cv2.NORM_MINMAX)
+    #return magnitude_spectrum, dft_shift
+
+    dft = np.fft.fft2(img)
+    dft = np.fft.fftshift(dft)
+    eps = 10**(-6)
+    mag = np.log(np.abs(dft) + eps).copy()
+    cv2.normalize(mag, mag, 0, 255, cv2.NORM_MINMAX)
+    return mag, dft
 
 
-def iDFT(fshift):
+def iDFT(fimg):
 
-    f_ishift = np.fft.ifftshift(fshift)
-    img_back = cv2.idft(f_ishift)
-    img_back = cv2.magnitude(img_back[:, :, 0], img_back[:, :, 1])
-    cv2.normalize(img_back, img_back, 0, 1, cv2.NORM_MINMAX)
-    return img_back
+    #f_ishift = np.fft.ifftshift(fshift)
+    #img_back = cv2.idft(f_ishift)
+    #img_back = cv2.magnitude(img_back[:, :, 0], img_back[:, :, 1])
+    #cv2.normalize(img_back, img_back, 0, 1, cv2.NORM_MINMAX)
+    #return img_back
+
+    fimg = np.fft.ifftshift(fimg)
+    img = np.fft.ifft2(fimg)
+    img = np.abs(img).copy()
+    cv2.normalize(img, img, 0, 255, cv2.NORM_MINMAX)
+    return img
 
 
 def gauss_high_freq_mask(img, d_0):
     n, m = img.shape
-    d = np.fromfunction(lambda i, j, k: euclid_norm(i-n/2, j-m/2), (n, m, 2), dtype=np.float32)
-    h = 1 - np.exp(-(d/d_0)**2)
+    d = np.fromfunction(lambda i, j: euclid_norm(i-n/2, j-m/2), (n, m), dtype=np.float32)
+    h = 1 - np.exp(-(d**2)/(2*(d_0**2)))
     return h
 
 
 def ideal_high_freq_mask(img, d_0):
     n, m = img.shape
-    d = np.fromfunction(lambda i, j, k:  euclid_norm(i-n/2, j-m/2), (n, m, 2))
+    d = np.fromfunction(lambda i, j:  euclid_norm(i-n/2, j-m/2), (n, m))
     d = (d > d_0).astype(int)
     return d
 

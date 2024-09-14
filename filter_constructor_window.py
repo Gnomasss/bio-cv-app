@@ -2,14 +2,16 @@ import sys
 from functools import partial
 from pathlib import Path
 
+import numpy as np
 import cv2
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QGraphicsView, QGraphicsEllipseItem, QGraphicsRectItem,
                              QGraphicsProxyWidget, QGridLayout, QLabel, QLineEdit, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QWidget, QAction, QFileDialog, QToolButton, QToolBar, QMessageBox)
+                             QPushButton, QWidget, QAction, QFileDialog, QToolButton, QToolBar, QMessageBox, QScrollArea)
 from PyQt5.QtGui import QPainter, QIcon, QColor, QFont
 from PyQt5.QtCore import QSize, Qt
 from PyQt5 import QtCore, QtWidgets
 
+from suppotr_functions import standart
 import func2action
 import special_filters_for_scene
 from filter_box_scene import NodeItem, GraphicsScene, Edge
@@ -42,6 +44,8 @@ class ConstructorWindow(QMainWindow):
         self.input_nodes = set()
         self.output_nodes = set()
         self.filters_box = None
+        self.scroll_filters = None
+        self.filter_box_widget = None
 
         self.centralWidget = QWidget(self.parent)
         self.initUI()
@@ -52,8 +56,22 @@ class ConstructorWindow(QMainWindow):
         #filters = func2action.all_func()
         self.setCentralWidget(self.centralWidget)
 
+
+        self.scroll_filters = QScrollArea()
         self.filters_box = QVBoxLayout()
+        self.filter_box_widget = QWidget()
+
         self.add_filters()
+
+        self.filter_box_widget.setLayout(self.filters_box)
+
+        self.scroll_filters.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.scroll_filters.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_filters.setWidgetResizable(True)
+        self.scroll_filters.setMaximumWidth(330)
+        self.scroll_filters.setWidget(self.filter_box_widget)
+
+        #self.filter_scroll.setLayout(self.filters_box)
 
         self.my_scene = GraphicsScene()
         self.view = QGraphicsView(self.centralWidget)
@@ -65,7 +83,8 @@ class ConstructorWindow(QMainWindow):
 
         self.hbox = QHBoxLayout(self.centralWidget)
 
-        self.hbox.addLayout(self.filters_box)
+        #self.hbox.addLayout(self.filters_box)
+        self.hbox.addWidget(self.scroll_filters)
         self.hbox.addWidget(self.view)
         #self.view.setFocus()
         #self.showMaximized()
@@ -223,7 +242,7 @@ class ConstructorWindow(QMainWindow):
             return 0, 1
         if func_name == 'output':
             return 1, 0
-        if 'bitwise' == func_name[:7] and ('not' not in func_name):
+        if 'bitwise' == func_name[:7] and ('not' not in func_name) or ('sum' in func_name):
             return 2, 1
         return 1, 1
 
@@ -322,9 +341,18 @@ class ConstructorWindow(QMainWindow):
         if self.test_img is not None:
             #self.test_img_windows.clear()
             graph = self.create_graph()
-            res = self.apply_img(self.test_img, graph, node)
+            try:
+                res = self.apply_img(self.test_img, graph, node)
+            except Exception:
+                error_message = QMessageBox()
+                error_message.setText("Error")
+                error_message.setInformativeText("An error occurred while processing the image.")
+                error_message.exec_()
+                return
 
             for img in res:
+                img = standart(img)
+                # if np.min(img) < 0 or np.max(img) > 255:
                 self.test_img_windows.append(TestImageWindow(img))
                 #img_window.setParent(self)
                 self.test_img_windows[-1].show()
